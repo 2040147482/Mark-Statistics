@@ -343,7 +343,6 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, u
     
     // 检查投注的色波是否命中
     const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
-    const isHit = drawSeBo.includes(betSeBo as string);
     
     if (stats[betSeBo]) {
       stats[betSeBo].totalBets++;

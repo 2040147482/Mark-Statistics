@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DatabaseService } from '@/lib/db';
 import { Draw, Bet, PlayType } from '@/lib/types';
-import { ShengXiaoChart, ShengXiaoBarChart } from '@/components/Charts';
-import { calculateShengXiaoStats } from '@/lib/stats';
+import { ShengXiaoBarChart } from '@/components/Charts';
 import { getAllShengXiao } from '@/lib/mappings';
 
 export default function ZodiacBettingPage() {
   const [bets, setBets] = useState<Bet[]>([]);
-  const [draws, setDraws] = useState<Draw[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedZodiac, setSelectedZodiac] = useState<string[]>([]);
@@ -25,13 +23,11 @@ export default function ZodiacBettingPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [betsData, drawsData, nextPeriodData] = await Promise.all([
+      const [betsData, nextPeriodData] = await Promise.all([
         DatabaseService.getBets(500),
-        DatabaseService.getDraws(100),
         DatabaseService.getNextPeriod()
       ]);
       setBets(betsData);
-      setDraws(drawsData);
       setNextPeriod(nextPeriodData);
       
       // 获取最新期号用于显示

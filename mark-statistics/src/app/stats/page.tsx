@@ -52,7 +52,7 @@ export default function StatsPage() {
       console.log('统计页面数据更新:', { draws: drawsData.length, bets: betsData.length });
       setDraws(drawsData);
       setBets(betsData);
-      setLastSyncAt(lastSync || null);
+      setLastSyncAt(typeof lastSync === 'string' ? lastSync : null);
     } catch (error) {
       console.error('加载统计数据失败:', error);
     } finally {
