@@ -354,7 +354,14 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, {
     if (stats[betColor]) {
       stats[betColor].totalBets++;
       stats[betColor].totalStake += bet.stake;
-      stats[betColor].totalResult += bet.result || 0;
+      
+      // 检查是否命中：投注的色波是否在开奖色波中
+      const isHit = drawSeBo.includes(betColor);
+      if (isHit) {
+        stats[betColor].totalResult += bet.stake * bet.odds; // 命中时获得奖金
+      } else {
+        stats[betColor].totalResult -= bet.stake; // 未命中时扣除投注金额
+      }
     }
   });
   

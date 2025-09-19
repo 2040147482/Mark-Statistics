@@ -28,7 +28,7 @@ export const NumberHeatmap: React.FC<NumberHeatmapProps> = ({
     },
     tooltip: {
       position: 'top',
-      formatter: function (params: any) {
+      formatter: function (params: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         const { data, dataIndex, seriesIndex } = params;
         const period = periods[seriesIndex] || `第${seriesIndex + 1}期`;
         const number = dataIndex + 1;
@@ -82,7 +82,7 @@ export const NumberHeatmap: React.FC<NumberHeatmapProps> = ({
       ),
       label: {
         show: true,
-        formatter: (params: any) => {
+        formatter: (params: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
           return params.data[2] > 0 ? params.data[2] : '';
         },
         fontSize: 10
