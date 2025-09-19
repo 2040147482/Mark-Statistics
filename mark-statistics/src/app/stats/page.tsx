@@ -84,7 +84,7 @@ export default function StatsPage() {
   const shengXiaoStatsRaw = calculateShengXiaoStats(filteredBets, draws);
   
   // 转换为正确的类型
-  const shengXiaoStats: Record<string, { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number }> = {};
+  const shengXiaoStats: { [key: string]: { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number } } = {};
   Object.entries(shengXiaoStatsRaw).forEach(([key, value]) => {
     if (typeof value === 'object' && value !== null) {
       shengXiaoStats[key] = {
