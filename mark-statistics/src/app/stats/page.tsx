@@ -81,21 +81,7 @@ export default function StatsPage() {
   const filteredBets = includeUnsettled ? bets : bets.filter(isBetSettled);
 
   // 计算统计数据
-  const shengXiaoStatsRaw = calculateShengXiaoStats(filteredBets, draws);
-  
-  // 转换为正确的类型
-  const shengXiaoStats: { [key: string]: { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number } } = {};
-  Object.entries(shengXiaoStatsRaw).forEach(([key, value]) => {
-    if (typeof value === 'object' && value !== null) {
-      shengXiaoStats[key] = {
-        totalBets: (value as any).totalBets || 0,
-        totalStake: (value as any).totalStake || 0,
-        totalResult: (value as any).totalResult || 0,
-        hitRate: (value as any).hitRate || 0,
-        profitRate: (value as any).profitRate || 0
-      };
-    }
-  });
+  const shengXiaoStats = calculateShengXiaoStats(filteredBets, draws);
 
   const tabs = [
     { id: 'overview', name: '概览', icon: '📊' },
