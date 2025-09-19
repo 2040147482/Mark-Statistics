@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DatabaseService } from '@/lib/db';
-import { Draw, Bet, PlayType } from '@/lib/types';
+import { Bet, PlayType } from '@/lib/types';
 import { ShengXiaoBarChart } from '@/components/Charts';
 import { getAllShengXiao } from '@/lib/mappings';
 

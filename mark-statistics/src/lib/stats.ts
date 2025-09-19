@@ -339,7 +339,6 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, u
     
     // 获取开奖号码的色波
     const drawNumbers = [draw.n1, draw.n2, draw.n3, draw.n4, draw.n5, draw.n6, draw.sp];
-    const drawSeBo = drawNumbers.map(num => getSeBo(num));
     
     // 检查投注的色波是否命中
     const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
