@@ -3,21 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DatabaseService } from '@/lib/db';
-import { Draw, Bet, NumberStats } from '@/lib/types';
+import { Draw, Bet } from '@/lib/types';
 import { 
-  NumberHeatmap, 
-  NumberFrequency, 
   ShengXiaoChart, 
-  ShengXiaoBarChart, 
-  TrendChart 
+  ShengXiaoBarChart
 } from '@/components/Charts';
 import { 
-  calculateNumberStats, 
-  calculatePlayTypeStats, 
-  calculateShengXiaoStats, 
-  calculateSeBoStats,
-  generateHeatmapData,
-  generateTrendData
+  calculateShengXiaoStats
 } from '@/lib/stats';
 
 export default function StatsPage() {
@@ -26,9 +18,27 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [includeUnsettled, setIncludeUnsettled] = useState<boolean>(true);
 
   useEffect(() => {
     loadData();
+    
+    // 监听存储变化，实现数据同步
+    const handleStorageChange = () => {
+      console.log('统计页面：收到数据更新事件');
+      loadData();
+    };
+    
+    // 监听 localStorage 变化（用于跨标签页同步）
+    window.addEventListener('storage', handleStorageChange);
+    
+    // 监听自定义事件（用于同标签页内同步）
+    window.addEventListener('dataUpdated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('dataUpdated', handleStorageChange);
+    };
   }, []);
 
   const loadData = async () => {
@@ -39,6 +49,7 @@ export default function StatsPage() {
         DatabaseService.getBetsForStats(1000),
         DatabaseService.getSetting('lastSyncAt')
       ]);
+      console.log('统计页面数据更新:', { draws: drawsData.length, bets: betsData.length });
       setDraws(drawsData);
       setBets(betsData);
       setLastSyncAt(lastSync || null);
@@ -60,19 +71,21 @@ export default function StatsPage() {
     );
   }
 
+  // 构建开奖映射与未开奖统计
+  const drawMap = new Map<string, Draw>();
+  draws.forEach(d => drawMap.set(d.id, d));
+  const isBetSettled = (bet: Bet) => drawMap.has(bet.drawId);
+  const unsettledCount = bets.filter(b => !isBetSettled(b)).length;
+
+  // 根据开关过滤投注（未开奖投注仅影响依赖投注的统计）
+  const filteredBets = includeUnsettled ? bets : bets.filter(isBetSettled);
+
   // 计算统计数据
-  const numberStats = calculateNumberStats(draws);
-  const playTypeStats = calculatePlayTypeStats(bets);
-  const shengXiaoStats = calculateShengXiaoStats(bets, draws);
-  const seBoStats = calculateSeBoStats(bets, draws);
-  const trendData = generateTrendData(bets, draws);
-  // 取消号码热力矩阵
+  const shengXiaoStats = calculateShengXiaoStats(filteredBets, draws);
 
   const tabs = [
     { id: 'overview', name: '概览', icon: '📊' },
-    { id: 'numbers', name: '号码分析', icon: '🔢' },
-    { id: 'playtypes', name: '玩法统计', icon: '🎯' },
-    { id: 'trends', name: '趋势分析', icon: '📈' }
+    { id: 'zodiac', name: '生肖投注', icon: '🐲' }
   ];
 
   return (
@@ -89,8 +102,19 @@ export default function StatsPage() {
               </Link>
               <h1 className="text-lg font-bold text-gray-900">统计分析</h1>
             </div>
-            <div className="text-xs text-gray-500">
-              {lastSyncAt ? `最近更新：${new Date(lastSyncAt).toLocaleString('zh-CN')}` : '数据洞察'}
+            <div className="flex items-center space-x-3">
+              <div className="text-xs text-gray-500" suppressHydrationWarning>
+                {lastSyncAt ? `最近更新：${new Date(lastSyncAt).toLocaleString('zh-CN')}` : '数据洞察'}
+              </div>
+              <label className="flex items-center space-x-1 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={includeUnsettled}
+                  onChange={(e) => setIncludeUnsettled(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>包含未开奖</span>
+              </label>
             </div>
           </div>
         </div>
@@ -99,12 +123,12 @@ export default function StatsPage() {
       <div className="px-4 py-6 space-y-6">
         {/* 标签页 - 移动端优化 */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="grid grid-cols-2 gap-1 p-1">
+          <div className="flex gap-1 p-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
+                className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -122,6 +146,11 @@ export default function StatsPage() {
         {/* 概览标签页 */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {unsettledCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3">
+                检测到 {unsettledCount} 条未开奖投注。关闭“包含未开奖”可仅统计已开奖数据。
+              </div>
+            )}
             {/* 统计卡片 - 移动端优化 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -176,7 +205,12 @@ export default function StatsPage() {
             </div>
 
             {/* 热力矩阵已移除 */}
+          </div>
+        )}
 
+        {/* 生肖投注标签页 */}
+        {activeTab === 'zodiac' && (
+          <div className="space-y-4">
             {/* 生肖投注分布（柱状图在上，饼图在下，饼图缩小） */}
             <div className="space-y-4">
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -184,7 +218,7 @@ export default function StatsPage() {
                 <ShengXiaoBarChart 
                   data={shengXiaoStats}
                   type="stake"
-                  height="280px"
+                  height="350px"
                 />
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -192,130 +226,7 @@ export default function StatsPage() {
                 <ShengXiaoChart 
                   data={shengXiaoStats}
                   type="stake"
-                  height="240px"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 号码分析标签页（移除热力矩阵） */}
-        {activeTab === 'numbers' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">号码出现频率</h2>
-              <NumberFrequency 
-                data={numberStats}
-                showTop={15}
-                height="350px"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 玩法统计标签页 */}
-        {activeTab === 'playtypes' && (
-          <div className="space-y-4">
-            {/* 玩法统计卡片 */}
-            <div className="space-y-3">
-              {playTypeStats.map((stat) => (
-                <div key={stat.playType} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-blue-600 font-bold text-sm">{stat.playType}</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">{stat.playType}</div>
-                        <div className="text-xs text-gray-500">{stat.totalBets} 次投注</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900">¥{stat.totalStake.toFixed(0)}</div>
-                      <div className="text-xs text-gray-500">投注金额</div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">盈亏金额</div>
-                      <div className={`text-sm font-medium ${
-                        stat.totalResult >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ¥{stat.totalResult.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">命中率</div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {(stat.hitRate * 100).toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">盈利率</span>
-                      <span className={`text-sm font-medium ${
-                        stat.profitRate >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {(stat.profitRate * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* 生肖和色波分布 */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900">生肖投注分布</h2>
-                <ShengXiaoChart 
-                  data={shengXiaoStats}
-                  type="stake"
-                  height="300px"
-                />
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900">色波投注分布</h2>
-                <ShengXiaoChart 
-                  data={seBoStats}
-                  type="stake"
-                  height="300px"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 趋势分析标签页 */}
-        {activeTab === 'trends' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">累计盈亏趋势</h2>
-              <TrendChart 
-                data={trendData}
-                type="cumulative"
-                height="300px"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900">命中率趋势</h2>
-                <TrendChart 
-                  data={trendData}
-                  type="hitRate"
-                  height="250px"
-                />
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900">投注金额趋势</h2>
-                <TrendChart 
-                  data={trendData}
-                  type="stake"
-                  height="250px"
+                  height="350px"
                 />
               </div>
             </div>

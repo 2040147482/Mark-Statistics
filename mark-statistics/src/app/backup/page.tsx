@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DatabaseService } from '@/lib/db';
 import { ExportData } from '@/lib/types';
 
@@ -186,7 +186,7 @@ export default function BackupPage() {
             <div>
               <strong>导出数据：</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>点击"导出数据"按钮下载 JSON 文件</li>
+                <li>点击&ldquo;导出数据&rdquo;按钮下载 JSON 文件</li>
                 <li>文件包含所有期号、投注记录和设置</li>
                 <li>建议定期备份数据以防丢失</li>
               </ul>

@@ -10,7 +10,7 @@ interface BaseChartProps {
   width?: string | number;
   loading?: boolean;
   className?: string;
-  onChartReady?: (chart: any) => void;
+  onChartReady?: (chart: unknown) => void;
 }
 
 export const BaseChart: React.FC<BaseChartProps> = ({

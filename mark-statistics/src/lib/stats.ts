@@ -1,5 +1,5 @@
 import { Draw, Bet, NumberStats, PlayTypeStats, TimeStats } from './types';
-import { getShengXiao, getSeBo, getHeShu, getWeiShu, getDaXiao, getDanShuang } from './mappings';
+import { getShengXiao, getSeBo } from './mappings';
 
 // 号码冷热统计
 export const calculateNumberStats = (draws: Draw[]): NumberStats[] => {
@@ -27,7 +27,7 @@ export const calculateNumberStats = (draws: Draw[]): NumberStats[] => {
   });
   
   // 计算遗漏
-  draws.forEach((draw, index) => {
+  draws.forEach((draw) => {
     const numbers = [draw.n1, draw.n2, draw.n3, draw.n4, draw.n5, draw.n6, draw.sp];
     const appearedNumbers = new Set(numbers);
     
@@ -87,6 +87,75 @@ export const calculatePlayTypeStats = (bets: Bet[]): PlayTypeStats[] => {
   return Array.from(statsMap.values()).sort((a, b) => b.totalStake - a.totalStake);
 };
 
+// 号码投注统计
+export const calculateNumberBetStats = (bets: Bet[]): NumberStats[] => {
+  const stats: NumberStats[] = [];
+  
+  // 初始化 1-49 号码统计
+  for (let i = 1; i <= 49; i++) {
+    stats.push({
+      number: i,
+      frequency: 0,
+      maxGap: 0,
+      avgGap: 0,
+      currentGap: 0,
+      totalStake: 0,
+      totalResult: 0,
+      hitRate: 0,
+      profitRate: 0
+    });
+  }
+  
+  // 统计投注数据
+  bets.forEach(bet => {
+    if (bet.playType === 'TE_MA' || bet.playType === 'ZHENG_MA' || bet.playType === 'LIAN_MA' || bet.playType === 'MIXED_BET') {
+      let numbers: number[] = [];
+      
+      if (Array.isArray(bet.numbers)) {
+        numbers = bet.numbers;
+      } else if (typeof bet.numbers === 'string' && bet.numbers.includes(',')) {
+        numbers = bet.numbers.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+      } else if (typeof bet.numbers === 'object' && bet.numbers.numbers) {
+        numbers = Array.isArray(bet.numbers.numbers) ? bet.numbers.numbers : [bet.numbers.numbers];
+      }
+      
+      numbers.forEach(num => {
+        if (num >= 1 && num <= 49) {
+          const stat = stats[num - 1];
+          stat.frequency++;
+          stat.totalStake += bet.stake;
+          stat.totalResult += bet.result || 0;
+        }
+      });
+    }
+  });
+  
+  // 计算命中率和盈利率
+  stats.forEach(stat => {
+    if (stat.frequency > 0) {
+      const winningBets = bets.filter(bet => {
+        if (bet.playType !== 'TE_MA' && bet.playType !== 'ZHENG_MA' && bet.playType !== 'LIAN_MA' && bet.playType !== 'MIXED_BET') return false;
+        
+        let numbers: number[] = [];
+        if (Array.isArray(bet.numbers)) {
+          numbers = bet.numbers;
+        } else if (typeof bet.numbers === 'string' && bet.numbers.includes(',')) {
+          numbers = bet.numbers.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        } else if (typeof bet.numbers === 'object' && bet.numbers.numbers) {
+          numbers = Array.isArray(bet.numbers.numbers) ? bet.numbers.numbers : [bet.numbers.numbers];
+        }
+        
+        return numbers.includes(stat.number) && (bet.result || 0) > 0;
+      }).length;
+      
+      stat.hitRate = winningBets / stat.frequency;
+      stat.profitRate = stat.totalStake > 0 ? stat.totalResult / stat.totalStake : 0;
+    }
+  });
+  
+  return stats.sort((a, b) => b.totalStake - a.totalStake);
+};
+
 // 时间维度统计
 export const calculateTimeStats = (bets: Bet[], draws: Draw[]): TimeStats[] => {
   const statsMap = new Map<string, TimeStats>();
@@ -134,8 +203,8 @@ export const calculateTimeStats = (bets: Bet[], draws: Draw[]): TimeStats[] => {
 };
 
 // 生肖统计
-export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<string, any> => {
-  const stats: Record<string, any> = {};
+export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<string, unknown> => {
+  const stats: Record<string, unknown> = {};
   const shengXiaoList = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
   
   // 初始化生肖统计
@@ -166,7 +235,7 @@ export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<stri
 
     // 兼容单选与多选：numbers 可能为 { sx: string | string[] } 或 string | string[]
     let selections: string[] = [];
-    const raw = (bet as any).numbers?.sx ?? (bet as any).numbers;
+    const raw = (bet.numbers as { sx?: string | string[] })?.sx ?? bet.numbers;
     if (Array.isArray(raw)) selections = raw as string[];
     else if (typeof raw === 'string') selections = [raw];
 
@@ -224,7 +293,7 @@ export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<stri
       const drawNumbers = [draw.n1, draw.n2, draw.n3, draw.n4, draw.n5, draw.n6, draw.sp];
       const drawShengXiao = new Set(drawNumbers.map(num => getShengXiao(num)));
       
-      const raw = (bet as any).numbers?.sx ?? (bet as any).numbers;
+      const raw = (bet.numbers as { sx?: string | string[] })?.sx ?? bet.numbers;
       let selections: string[] = [];
       if (Array.isArray(raw)) selections = raw as string[]; 
       else if (typeof raw === 'string') selections = [raw];
@@ -241,8 +310,8 @@ export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<stri
 };
 
 // 色波统计
-export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, any> => {
-  const stats: Record<string, any> = {};
+export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, unknown> => {
+  const stats: Record<string, unknown> = {};
   const seBoList = ['红', '蓝', '绿'];
   
   // 初始化色波统计
@@ -273,8 +342,8 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, a
     const drawSeBo = drawNumbers.map(num => getSeBo(num));
     
     // 检查投注的色波是否命中
-    const betSeBo = bet.numbers?.color || bet.numbers;
-    const isHit = drawSeBo.includes(betSeBo);
+    const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
+    const isHit = drawSeBo.includes(betSeBo as string);
     
     if (stats[betSeBo]) {
       stats[betSeBo].totalBets++;
@@ -288,7 +357,7 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, a
     const stat = stats[color];
     const winningBets = bets.filter(bet => {
       if (bet.playType !== 'SE_BO') return false;
-      const betSeBo = bet.numbers?.color || bet.numbers;
+      const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
       return betSeBo === color && (bet.result || 0) > 0;
     }).length;
     
@@ -324,15 +393,15 @@ export const generateHeatmapData = (draws: Draw[], windowSize = 20): number[][] 
 };
 
 // 趋势数据生成
-export const generateTrendData = (bets: Bet[], draws: Draw[]): any[] => {
-  const trendData: any[] = [];
+export const generateTrendData = (bets: Bet[], draws: Draw[]): unknown[] => {
+  const trendData: unknown[] = [];
   const drawMap = new Map<string, Draw>();
   draws.forEach(draw => {
     drawMap.set(draw.period, draw);
   });
   
   // 按期号分组统计
-  const periodStats = new Map<string, any>();
+  const periodStats = new Map<string, unknown>();
   
   bets.forEach(bet => {
     const draw = drawMap.get(bet.drawId);

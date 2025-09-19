@@ -94,12 +94,12 @@ export class DatabaseService {
   }
 
   // 设置相关
-  static async getSetting(key: string): Promise<any> {
+  static async getSetting(key: string): Promise<unknown> {
     const setting = await db.settings.where('key').equals(key).first();
     return setting?.value;
   }
 
-  static async setSetting(key: string, value: any): Promise<void> {
+  static async setSetting(key: string, value: unknown): Promise<void> {
     await db.settings.put({ key, value });
   }
 
@@ -149,5 +149,36 @@ export class DatabaseService {
       .reverse()
       .limit(limit)
       .toArray();
+  }
+
+  // 获取最新期号
+  static async getLatestDraw(): Promise<Draw | null> {
+    const draws = await db.draws
+      .orderBy('openTime')
+      .reverse()
+      .limit(1)
+      .toArray();
+    return draws[0] || null;
+  }
+
+  // 获取下一期期号
+  static async getNextPeriod(): Promise<string> {
+    const latest = await this.getLatestDraw();
+    if (!latest) {
+      // 如果没有期号数据，返回当前年份的第一期
+      const currentYear = new Date().getFullYear();
+      return `${currentYear}-001`;
+    }
+    
+    const match = /^(\d+)(?:[-_]?(\d+))?$/.exec(latest.period);
+    if (match) {
+      const head = match[1];
+      const tail = match[2];
+      return tail ? `${head}-${String(parseInt(tail) + 1).padStart(3, '0')}` : String(parseInt(head) + 1);
+    }
+    
+    // 如果解析失败，返回当前年份的第一期
+    const currentYear = new Date().getFullYear();
+    return `${currentYear}-001`;
   }
 }

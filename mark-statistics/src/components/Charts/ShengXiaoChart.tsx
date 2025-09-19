@@ -52,7 +52,7 @@ export const ShengXiaoChart: React.FC<ShengXiaoChartProps> = ({
   };
 
   const getTooltipFormatter = () => {
-    return (params: any) => {
+    return (params: unknown) => {
       const { name, value, data } = params;
       return `
         <div>
@@ -173,7 +173,7 @@ export const ShengXiaoBarChart: React.FC<ShengXiaoChartProps> = ({
       axisPointer: {
         type: 'shadow'
       },
-      formatter: (params: any) => {
+      formatter: (params: unknown) => {
         const { name, value, data } = params[0];
         return `
           <div>
@@ -215,7 +215,7 @@ export const ShengXiaoBarChart: React.FC<ShengXiaoChartProps> = ({
       })),
       barWidth: 16,
       itemStyle: {
-        color: (params: any) => {
+        color: (params: unknown) => {
           // 根据数值设置颜色
           const maxValue = Math.max(...chartData.map(i => i.value));
           const ratio = (params.value || 0) / (maxValue || 1);
@@ -229,7 +229,7 @@ export const ShengXiaoBarChart: React.FC<ShengXiaoChartProps> = ({
       label: {
         show: true,
         position: 'right',
-        formatter: (p: any) => `${p.value}${type === 'hitRate' ? '%' : ''}`
+        formatter: (p: unknown) => `${(p as { value: number }).value}${type === 'hitRate' ? '%' : ''}`
       },
       emphasis: {
         itemStyle: {

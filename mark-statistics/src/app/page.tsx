@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { DatabaseService } from '@/lib/db';
-import { Draw, Bet } from '@/lib/types';
+
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -40,25 +40,18 @@ export default function Home() {
 
   const menuItems = [
     {
-      title: '期号管理',
-      description: '导入和管理开奖数据',
-      href: '/draws',
-      icon: '📊',
-      color: 'bg-blue-50 hover:bg-blue-100 border-blue-200'
-    },
-    {
-      title: '投注录入',
-      description: '记录投注和结算',
-      href: '/bets',
-      icon: '💰',
-      color: 'bg-green-50 hover:bg-green-100 border-green-200'
+      title: '生肖投注',
+      description: '录入投注并实时查看图表',
+      href: '/zodiac-betting',
+      icon: '🐲',
+      color: 'bg-purple-50 hover:bg-purple-100 border-purple-200'
     },
     {
       title: '统计报表',
       description: '查看分析图表',
       href: '/stats',
       icon: '📈',
-      color: 'bg-purple-50 hover:bg-purple-100 border-purple-200'
+      color: 'bg-blue-50 hover:bg-blue-100 border-blue-200'
     },
     {
       title: '数据备份',
