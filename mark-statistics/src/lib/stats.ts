@@ -12,7 +12,11 @@ export const calculateNumberStats = (draws: Draw[]): NumberStats[] => {
       frequency: 0,
       maxGap: 0,
       avgGap: 0,
-      currentGap: 0
+      currentGap: 0,
+      totalStake: 0,
+      totalResult: 0,
+      hitRate: 0,
+      profitRate: 0
     });
   }
   
@@ -115,8 +119,9 @@ export const calculateNumberBetStats = (bets: Bet[]): NumberStats[] => {
         numbers = bet.numbers;
       } else if (typeof bet.numbers === 'string' && bet.numbers.includes(',')) {
         numbers = bet.numbers.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-      } else if (typeof bet.numbers === 'object' && bet.numbers.numbers) {
-        numbers = Array.isArray(bet.numbers.numbers) ? bet.numbers.numbers : [bet.numbers.numbers];
+      } else if (typeof bet.numbers === 'object' && bet.numbers !== null && 'numbers' in bet.numbers) {
+        const numbersObj = bet.numbers as { numbers: number | number[] };
+        numbers = Array.isArray(numbersObj.numbers) ? numbersObj.numbers : [numbersObj.numbers];
       }
       
       numbers.forEach(num => {
@@ -141,8 +146,9 @@ export const calculateNumberBetStats = (bets: Bet[]): NumberStats[] => {
           numbers = bet.numbers;
         } else if (typeof bet.numbers === 'string' && bet.numbers.includes(',')) {
           numbers = bet.numbers.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        } else if (typeof bet.numbers === 'object' && bet.numbers.numbers) {
-          numbers = Array.isArray(bet.numbers.numbers) ? bet.numbers.numbers : [bet.numbers.numbers];
+        } else if (typeof bet.numbers === 'object' && bet.numbers !== null && 'numbers' in bet.numbers) {
+          const numbersObj = bet.numbers as { numbers: number | number[] };
+          numbers = Array.isArray(numbersObj.numbers) ? numbersObj.numbers : [numbersObj.numbers];
         }
         
         return numbers.includes(stat.number) && (bet.result || 0) > 0;
@@ -203,8 +209,8 @@ export const calculateTimeStats = (bets: Bet[], draws: Draw[]): TimeStats[] => {
 };
 
 // 生肖统计
-export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<string, unknown> => {
-  const stats: Record<string, unknown> = {};
+export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<string, { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number }> => {
+  const stats: Record<string, { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number }> = {};
   const shengXiaoList = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
   
   // 初始化生肖统计
@@ -310,8 +316,8 @@ export const calculateShengXiaoStats = (bets: Bet[], draws: Draw[]): Record<stri
 };
 
 // 色波统计
-export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, unknown> => {
-  const stats: Record<string, unknown> = {};
+export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number }> => {
+  const stats: Record<string, { totalBets: number; totalStake: number; totalResult: number; hitRate: number; profitRate: number }> = {};
   const seBoList = ['红', '蓝', '绿'];
   
   // 初始化色波统计
@@ -339,14 +345,16 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, u
     
     // 获取开奖号码的色波
     const drawNumbers = [draw.n1, draw.n2, draw.n3, draw.n4, draw.n5, draw.n6, draw.sp];
+    const drawSeBo = drawNumbers.map(num => getSeBo(num));
     
     // 检查投注的色波是否命中
     const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
+    const betColor = typeof betSeBo === 'string' ? betSeBo : '';
     
-    if (stats[betSeBo]) {
-      stats[betSeBo].totalBets++;
-      stats[betSeBo].totalStake += bet.stake;
-      stats[betSeBo].totalResult += bet.result || 0;
+    if (stats[betColor]) {
+      stats[betColor].totalBets++;
+      stats[betColor].totalStake += bet.stake;
+      stats[betColor].totalResult += bet.result || 0;
     }
   });
   
@@ -356,7 +364,8 @@ export const calculateSeBoStats = (bets: Bet[], draws: Draw[]): Record<string, u
     const winningBets = bets.filter(bet => {
       if (bet.playType !== 'SE_BO') return false;
       const betSeBo = (bet.numbers as { color?: string })?.color || bet.numbers;
-      return betSeBo === color && (bet.result || 0) > 0;
+      const betColor = typeof betSeBo === 'string' ? betSeBo : '';
+      return betColor === color && (bet.result || 0) > 0;
     }).length;
     
     stat.hitRate = stat.totalBets > 0 ? winningBets / stat.totalBets : 0;
@@ -391,15 +400,15 @@ export const generateHeatmapData = (draws: Draw[], windowSize = 20): number[][] 
 };
 
 // 趋势数据生成
-export const generateTrendData = (bets: Bet[], draws: Draw[]): unknown[] => {
-  const trendData: unknown[] = [];
+export const generateTrendData = (bets: Bet[], draws: Draw[]): Array<{ period: string; totalBets: number; totalStake: number; totalResult: number; hitRate: number; cumulativeResult: number }> => {
+  const trendData: Array<{ period: string; totalBets: number; totalStake: number; totalResult: number; hitRate: number; cumulativeResult: number }> = [];
   const drawMap = new Map<string, Draw>();
   draws.forEach(draw => {
     drawMap.set(draw.period, draw);
   });
   
   // 按期号分组统计
-  const periodStats = new Map<string, unknown>();
+  const periodStats = new Map<string, { period: string; totalBets: number; totalStake: number; totalResult: number; hitRate: number; cumulativeResult: number }>();
   
   bets.forEach(bet => {
     const draw = drawMap.get(bet.drawId);
@@ -412,11 +421,12 @@ export const generateTrendData = (bets: Bet[], draws: Draw[]): unknown[] => {
         totalBets: 0,
         totalStake: 0,
         totalResult: 0,
-        hitRate: 0
+        hitRate: 0,
+        cumulativeResult: 0
       });
     }
     
-    const stat = periodStats.get(period);
+    const stat = periodStats.get(period)!;
     stat.totalBets++;
     stat.totalStake += bet.stake;
     stat.totalResult += bet.result || 0;

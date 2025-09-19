@@ -48,10 +48,10 @@ export interface NumberStats {
   maxGap: number; // 最大遗漏
   avgGap: number; // 平均遗漏
   currentGap: number; // 当前遗漏
-  totalStake?: number; // 投注总金额
-  totalResult?: number; // 盈亏总金额
-  hitRate?: number; // 命中率
-  profitRate?: number; // 盈利率
+  totalStake: number; // 投注总金额
+  totalResult: number; // 盈亏总金额
+  hitRate: number; // 命中率
+  profitRate: number; // 盈利率
 }
 
 export interface PlayTypeStats {
