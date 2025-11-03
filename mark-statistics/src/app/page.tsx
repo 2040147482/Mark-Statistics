@@ -40,6 +40,13 @@ export default function Home() {
 
   const menuItems = [
     {
+      title: '号码投注',
+      description: '1-49号码投注录入',
+      href: '/number-betting',
+      icon: '🔢',
+      color: 'bg-green-50 hover:bg-green-100 border-green-200'
+    },
+    {
       title: '生肖投注',
       description: '录入投注并实时查看图表',
       href: '/zodiac-betting',
