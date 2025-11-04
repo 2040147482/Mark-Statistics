@@ -7,14 +7,13 @@ import { SelectedNumbers } from '@/components/SelectedNumbers';
 import { ActionButtons } from '@/components/ActionButtons';
 import { BetHistory } from '@/components/BetHistory';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { NumberBettingChart } from '@/components/NumberBettingChart';
+import { NumberBettingChartSplit } from '@/components/NumberBettingChartSplit';
 
 export default function NumberBettingPage() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [betAmount, setBetAmount] = useState<number>(100);
   const [betHistory, setBetHistory] = useState<Array<{id: string, numbers: number[], amount: number, timestamp: number}>>([]);
   const [editingBet, setEditingBet] = useState<string | null>(null);
-  const [showAllNumbers, setShowAllNumbers] = useState<boolean>(false);
   const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -145,16 +144,16 @@ export default function NumberBettingPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">号码投注</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">选择号码</h2>
+          <h2 className="text-xl font-semibold mb-3">选择号码</h2>
           <NumberGrid 
             selectedNumbers={selectedNumbers} 
             onNumberSelect={handleNumberClick}
             onMultipleSelect={(numbers) => setSelectedNumbers(numbers)}
           />
           
-          <div className="mt-6">
+          <div className="mt-4">
             <h3 className="text-lg font-medium mb-2">已选号码</h3>
             <SelectedNumbers 
               selectedNumbers={selectedNumbers} 
@@ -225,26 +224,12 @@ export default function NumberBettingPage() {
           
           <div className="mt-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">号码投注金额排行</h2>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={showAllNumbers}
-                    onChange={(e) => setShowAllNumbers(e.target.checked)}
-                    className="rounded"
-                  />
-                  显示全部49个号码
-                </label>
-              </div>
+              <h2 className="text-xl font-semibold">号码投注金额柱状图（四部分）</h2>
             </div>
-            <div className={showAllNumbers ? 'max-h-96 overflow-y-auto' : ''}>
-              <NumberBettingChart 
-                numberBets={calculateNumberBets()} 
-                showAll={showAllNumbers}
-                height={showAllNumbers ? '1200px' : '400px'}
-              />
-            </div>
+            <NumberBettingChartSplit
+              numberBets={calculateNumberBets()}
+              heightPerChart="300px"
+            />
           </div>
       </div>
       </div>

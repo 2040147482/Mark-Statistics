@@ -10,6 +10,12 @@ interface NumberBettingChartProps {
   height?: string;
   className?: string;
   showAll?: boolean; // 是否显示所有49个号码
+  // 当提供子集范围时，仅展示排序后的指定区间数据（用于四图分割）
+  subsetRange?: { start: number; end: number };
+  // 统一的X轴最大值，确保不同子图刻度一致
+  xAxisMax?: number;
+  // 自定义标题（例如：第1部分、第2部分等）
+  title?: string;
 }
 
 
@@ -18,7 +24,10 @@ export const NumberBettingChart: React.FC<NumberBettingChartProps> = ({
   numberBets, 
   height = '400px', 
   className = '',
-  showAll = true // 默认显示全部49个号码
+  showAll = true, // 默认显示全部49个号码
+  subsetRange,
+  xAxisMax,
+  title,
 }) => {
   // 处理数据，确保包含所有1-49号码
   const chartData = useMemo(() => {
@@ -34,13 +43,20 @@ export const NumberBettingChart: React.FC<NumberBettingChartProps> = ({
     
     // 按投注金额排序
     const sortedData = [...allNumbersData].sort((a, b) => b.value - a.value);
+
+    // 如果提供了子集范围，则按照区间切分
+    if (subsetRange) {
+      const start = Math.max(0, subsetRange.start);
+      const end = Math.min(sortedData.length, subsetRange.end);
+      return sortedData.slice(start, end);
+    }
     
     return showAll ? sortedData : sortedData.slice(0, 10);
-  }, [numberBets, showAll]);
+  }, [numberBets, showAll, subsetRange]);
 
   const option: EChartsOption = {
     title: {
-      text: '号码投注金额排行',
+      text: title ?? '号码投注金额排行',
       left: 'center',
       textStyle: {
         fontSize: 16,
@@ -73,7 +89,7 @@ export const NumberBettingChart: React.FC<NumberBettingChartProps> = ({
     dataZoom: [
       {
         type: 'slider',
-        show: showAll,
+        show: showAll && !subsetRange,
         yAxisIndex: 0,
         start: 0,
         end: showAll ? 40 : 100, // 当显示全部号码时，默认只显示前40%
@@ -85,6 +101,7 @@ export const NumberBettingChart: React.FC<NumberBettingChartProps> = ({
       type: 'value',
       name: '投注金额 (元)',
       nameTextStyle: { fontSize: 12 },
+      max: xAxisMax,
       axisLine: {
         lineStyle: {
           color: '#d9d9d9'

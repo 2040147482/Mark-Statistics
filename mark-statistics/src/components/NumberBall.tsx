@@ -32,7 +32,7 @@ export const NumberBall: React.FC<NumberBallProps> = ({
     <button
       onClick={onClick}
       className={`
-        w-14 h-14 rounded-full flex items-center justify-center
+        w-12 h-12 rounded-full flex items-center justify-center
         relative transition-all duration-200
         ${selected ? 'transform scale-110 shadow-lg' : ''}
       `}
@@ -48,7 +48,7 @@ export const NumberBall: React.FC<NumberBallProps> = ({
       `}>
         {/* 号码 */}
         <span className={`
-          text-white font-bold text-xl
+          text-white font-bold text-lg
           ${selected ? 'text-shadow-sm' : ''}
         `}>
           {number.toString().padStart(2, '0')}

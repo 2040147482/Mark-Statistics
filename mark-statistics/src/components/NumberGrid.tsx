@@ -40,10 +40,10 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-6 gap-1">
         {/* 第一列：生肖 */}
-        <div className="space-y-4">
-          <div className="h-14 flex items-center justify-center font-bold">生肖</div>
+        <div className="space-y-2">
+          <div className="h-12 flex items-center justify-center font-bold">生肖</div>
           {zodiacList.map(zodiac => {
             const zodiacNumbers = zodiacMap[zodiac] || [];
             const allSelected = zodiacNumbers.every(num => selectedNumbers.includes(num));
@@ -53,7 +53,7 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
                 key={zodiac}
                 onClick={() => handleZodiacSelect(zodiac)}
                 className={`
-                  h-14 w-full rounded-md border flex items-center justify-center
+                  h-12 w-full rounded-md border flex items-center justify-center
                   ${allSelected ? 'bg-blue-500 text-white font-bold' : 'bg-white text-gray-800'}
                   hover:bg-blue-100 transition-colors
                 `}
@@ -66,15 +66,15 @@ export const NumberGrid: React.FC<NumberGridProps> = ({
         
         {/* 其他列：号码 */}
         {[0, 1, 2, 3, 4].map(colIndex => (
-          <div key={colIndex} className="space-y-4">
-            <div className="h-14 flex items-center justify-center font-bold">号码</div>
+          <div key={colIndex} className="space-y-2">
+            <div className="h-12 flex items-center justify-center font-bold">号码</div>
             {zodiacList.map(zodiac => {
               const zodiacNumbers = zodiacMap[zodiac] || [];
               // 每行显示该生肖对应的号码，每列最多显示一个号码
               const numberForThisCell = zodiacNumbers[colIndex];
               
               return (
-                <div key={`${zodiac}-${colIndex}`} className="h-14 flex justify-center items-center">
+                <div key={`${zodiac}-${colIndex}`} className="h-12 flex justify-center items-center">
                   {numberForThisCell && (
                     <NumberBall
                       number={numberForThisCell}
