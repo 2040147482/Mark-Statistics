@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { NumberGrid } from '@/components/NumberGrid';
 import { SelectedNumbers } from '@/components/SelectedNumbers';
 import { ActionButtons } from '@/components/ActionButtons';
 import { BetHistory } from '@/components/BetHistory';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { NumberBettingChartSplit } from '@/components/NumberBettingChartSplit';
+import { NumberBadge } from '@/components/NumberBadge';
 
 export default function NumberBettingPage() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [betAmount, setBetAmount] = useState<number>(100);
   const [betHistory, setBetHistory] = useState<Array<{id: string, numbers: number[], amount: number, timestamp: number}>>([]);
   const [editingBet, setEditingBet] = useState<string | null>(null);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(false);
+  const [activeBaselineNumber, setActiveBaselineNumber] = useState<number | null>(null);
+  const [comparisonBaselineNumber, setComparisonBaselineNumber] = useState<number | null>(null);
+
   const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -121,23 +125,75 @@ export default function NumberBettingPage() {
     setBetAmount(amount);
   };
 
-  // 计算每个号码的总投注金额
-  const calculateNumberBets = () => {
-    const numberBets: Record<number, number> = {};
-    
-    // 初始化所有号码的投注金额为0
+  const numberBets = useMemo(() => {
+    const totals: Record<number, number> = {};
+
     for (let i = 1; i <= 49; i++) {
-      numberBets[i] = 0;
+      totals[i] = 0;
     }
-    
-    // 累加每个号码的投注金额
+
     betHistory.forEach(bet => {
       bet.numbers.forEach(num => {
-        numberBets[num] += bet.amount;
+        totals[num] += bet.amount;
       });
     });
-    
-    return numberBets;
+
+    return totals;
+  }, [betHistory]);
+
+  const sortedNumberEntries = useMemo(() => {
+    return Array.from({ length: 49 }, (_, i) => {
+      const number = i + 1;
+      return {
+        number,
+        amount: numberBets[number] || 0,
+      };
+    }).sort((a, b) => {
+      if (b.amount !== a.amount) {
+        return b.amount - a.amount;
+      }
+      return a.number - b.number;
+    });
+  }, [numberBets]);
+
+  const numberTableGroups = useMemo(() => {
+    const perTable = Math.ceil(sortedNumberEntries.length / 3);
+    return Array.from({ length: 3 }, (_, idx) =>
+      sortedNumberEntries.slice(idx * perTable, (idx + 1) * perTable)
+    );
+  }, [sortedNumberEntries]);
+
+  const comparisonBaselineAmount = comparisonBaselineNumber != null
+    ? numberBets[comparisonBaselineNumber] || 0
+    : 0;
+
+  const comparisonRows = useMemo(() => {
+    if (comparisonBaselineNumber == null) return [];
+    const baselineAmount = numberBets[comparisonBaselineNumber] || 0;
+
+    return sortedNumberEntries
+      .filter(entry => entry.number !== comparisonBaselineNumber && entry.amount > baselineAmount)
+      .map(entry => ({
+        number: entry.number,
+        delta: entry.amount - baselineAmount,
+      }));
+  }, [comparisonBaselineNumber, numberBets, sortedNumberEntries]);
+
+  const handleRowClick = (number: number) => {
+    setActiveBaselineNumber(prev => {
+      if (prev === number) {
+        if (comparisonBaselineNumber === number) {
+          setComparisonBaselineNumber(null);
+        }
+        return null;
+      }
+      return number;
+    });
+  };
+
+  const handleCompareClick = (event: React.MouseEvent<HTMLButtonElement>, number: number) => {
+    event.stopPropagation();
+    setComparisonBaselineNumber(number);
   };
 
   return (
@@ -174,8 +230,8 @@ export default function NumberBettingPage() {
                     placeholder="输入金额"
                     className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <div className="flex gap-1">
-                    {[100, 200, 500, 1000].map(amount => (
+                  <div className="flex flex-wrap gap-1">
+                    {[10, 20, 30, 50, 100, 200].map(amount => (
                       <button
                         key={amount}
                         onClick={() => handleQuickAmount(amount)}
@@ -205,32 +261,119 @@ export default function NumberBettingPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">投注历史</h2>
-            <button
-              type="button"
-              disabled={betHistory.length === 0}
-              onClick={() => setClearDialogOpen(true)}
-              className={`px-3 py-1.5 text-sm rounded-md border ${betHistory.length === 0 ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} `}
-              aria-disabled={betHistory.length === 0}
-            >
-              清空
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsHistoryCollapsed(prev => !prev)}
+                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              >
+                {isHistoryCollapsed ? '展开' : '折叠'}
+              </button>
+              <button
+                type="button"
+                disabled={betHistory.length === 0}
+                onClick={() => setClearDialogOpen(true)}
+                className={`px-3 py-1.5 text-sm rounded-md border ${betHistory.length === 0 ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} `}
+                aria-disabled={betHistory.length === 0}
+              >
+                清空
+              </button>
+            </div>
           </div>
-          <BetHistory 
-            betHistory={betHistory} 
-            onEdit={handleEditBet}
-            onDelete={handleDeleteBet}
-            selectedBetId={editingBet}
-          />
+          {isHistoryCollapsed ? (
+            <p className="text-sm text-gray-500">投注历史已折叠</p>
+          ) : (
+            <BetHistory 
+              betHistory={betHistory} 
+              onEdit={handleEditBet}
+              onDelete={handleDeleteBet}
+              selectedBetId={editingBet}
+            />
+          )}
           
           <div className="mt-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">号码投注金额柱状图（四部分）</h2>
+              <h2 className="text-xl font-semibold">号码投注金额表</h2>
             </div>
-            <NumberBettingChartSplit
-              numberBets={calculateNumberBets()}
-              heightPerChart="300px"
-            />
+            <div className="grid grid-cols-3 gap-4">
+              {numberTableGroups.map((group, idx) => (
+                <table
+                  key={idx}
+                  className="w-full border border-gray-200 rounded-lg text-sm shadow-sm"
+                >
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600">
+                      <th className="px-3 py-2 text-left font-medium">号码</th>
+                      <th className="px-3 py-2 text-right font-medium">投注金额</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.map(({ number, amount }) => (
+                      <React.Fragment key={number}>
+                        <tr
+                          className={`border-t border-gray-100 cursor-pointer transition-colors ${
+                            activeBaselineNumber === number ? 'bg-blue-50' : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => handleRowClick(number)}
+                        >
+                          <td className="px-3 py-2">
+                            <NumberBadge number={number} size="sm" />
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-700">
+                            ¥{amount}
+                          </td>
+                        </tr>
+                        {activeBaselineNumber === number && (
+                          <tr className="border-t border-blue-100 bg-blue-50">
+                            <td colSpan={2} className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={(event) => handleCompareClick(event, number)}
+                                className="px-3 py-1.5 text-xs font-medium rounded border border-blue-200 text-blue-600 hover:bg-blue-100"
+                              >
+                                查看大于该投注金额的号码
+                              </button>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              ))}
+            </div>
           </div>
+          {comparisonBaselineNumber != null && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-gray-600">当前基准号码</span>
+                <NumberBadge number={comparisonBaselineNumber} size="sm" />
+                <span className="text-sm text-gray-600">投注金额 ¥{comparisonBaselineAmount}</span>
+              </div>
+              {comparisonRows.length > 0 ? (
+                <table className="w-full border border-gray-200 rounded-lg text-sm shadow-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600">
+                      <th className="px-3 py-2 text-left font-medium">号码</th>
+                      <th className="px-3 py-2 text-right font-medium">超出金额</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonRows.map(({ number, delta }) => (
+                      <tr key={number} className="border-t border-gray-100">
+                        <td className="px-3 py-2">
+                          <NumberBadge number={number} size="sm" />
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-700">+¥{delta}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-gray-500">暂无投注金额大于该基准的号码。</p>
+              )}
+            </div>
+          )}
       </div>
       </div>
       {/* 清空历史确认对话框 */}
