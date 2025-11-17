@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { NumberGrid } from '@/components/NumberGrid';
 import { SelectedNumbers } from '@/components/SelectedNumbers';
@@ -17,9 +17,11 @@ export default function NumberBettingPage() {
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(false);
   const [activeBaselineNumber, setActiveBaselineNumber] = useState<number | null>(null);
   const [comparisonBaselineNumber, setComparisonBaselineNumber] = useState<number | null>(null);
+  const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
   const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 从本地存储加载投注历史
   useEffect(() => {
@@ -179,6 +181,22 @@ export default function NumberBettingPage() {
       }));
   }, [comparisonBaselineNumber, numberBets, sortedNumberEntries]);
 
+  useEffect(() => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
+    setCopySuccess(false);
+  }, [comparisonBaselineNumber, comparisonRows.length]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleRowClick = (number: number) => {
     setActiveBaselineNumber(prev => {
       if (prev === number) {
@@ -194,6 +212,28 @@ export default function NumberBettingPage() {
   const handleCompareClick = (event: React.MouseEvent<HTMLButtonElement>, number: number) => {
     event.stopPropagation();
     setComparisonBaselineNumber(number);
+  };
+
+  const handleCopyComparison = async () => {
+    if (comparisonRows.length === 0) return;
+    const dataLines = comparisonRows.map(({ number, delta }) => `${number}\t各\t${delta}`);
+    const tableText = dataLines.join('\n');
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(tableText);
+      }
+      setCopySuccess(true);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopySuccess(false);
+        copyTimeoutRef.current = null;
+      }, 2000);
+    } catch (error) {
+      console.error('复制比较表失败', error);
+    }
   };
 
   return (
@@ -345,10 +385,26 @@ export default function NumberBettingPage() {
           </div>
           {comparisonBaselineNumber != null && (
             <div className="mt-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-gray-600">当前基准号码</span>
-                <NumberBadge number={comparisonBaselineNumber} size="sm" />
-                <span className="text-sm text-gray-600">投注金额 ¥{comparisonBaselineAmount}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">当前基准号码</span>
+                  <NumberBadge number={comparisonBaselineNumber} size="sm" />
+                  <span className="text-sm text-gray-600">投注金额 ¥{comparisonBaselineAmount}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyComparison}
+                  className={`px-3 py-1.5 text-xs font-medium rounded border transition-colors ${
+                    comparisonRows.length === 0
+                      ? 'border-blue-200 text-blue-300 cursor-not-allowed'
+                      : copySuccess
+                        ? 'border-green-300 text-green-600 bg-green-50'
+                        : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  }`}
+                  disabled={comparisonRows.length === 0}
+                >
+                  {copySuccess ? '已复制' : '复制表格'}
+                </button>
               </div>
               {comparisonRows.length > 0 ? (
                 <table className="w-full border border-gray-200 rounded-lg text-sm shadow-sm">
@@ -364,7 +420,7 @@ export default function NumberBettingPage() {
                         <td className="px-3 py-2">
                           <NumberBadge number={number} size="sm" />
                         </td>
-                        <td className="px-3 py-2 text-right text-gray-700">+¥{delta}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">¥{delta}</td>
                       </tr>
                     ))}
                   </tbody>
