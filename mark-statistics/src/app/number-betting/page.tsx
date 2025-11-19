@@ -181,6 +181,10 @@ export default function NumberBettingPage() {
       }));
   }, [comparisonBaselineNumber, numberBets, sortedNumberEntries]);
 
+  const comparisonTotal = useMemo(() => {
+    return comparisonRows.reduce((sum, row) => sum + row.delta, 0);
+  }, [comparisonRows]);
+
   useEffect(() => {
     if (copyTimeoutRef.current) {
       clearTimeout(copyTimeoutRef.current);
@@ -216,7 +220,10 @@ export default function NumberBettingPage() {
 
   const handleCopyComparison = async () => {
     if (comparisonRows.length === 0) return;
-    const dataLines = comparisonRows.map(({ number, delta }) => `${number}\t各\t${delta}`);
+    const dataLines = [
+      ...comparisonRows.map(({ number, delta }) => `${number.toString().padStart(2, '0')}\t各\t${delta}`),
+      `总额\t总计\t${comparisonTotal}`
+    ];
     const tableText = dataLines.join('\n');
 
     try {
@@ -423,6 +430,10 @@ export default function NumberBettingPage() {
                         <td className="px-3 py-2 text-right text-gray-700">¥{delta}</td>
                       </tr>
                     ))}
+                    <tr className="border-t border-gray-200 bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-gray-700">总额</td>
+                      <td className="px-3 py-2 text-right font-semibold text-gray-900">¥{comparisonTotal}</td>
+                    </tr>
                   </tbody>
                 </table>
               ) : (
